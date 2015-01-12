@@ -1433,31 +1433,6 @@ MachineInfoList *qmp_query_machines(Error **errp)
     return mach_list;
 }
 
-static int machine_help_func(QemuOpts *opts, MachineState *machine)
-{
-    ObjectProperty *prop;
-
-    if (!qemu_opt_has_help_opt(opts)) {
-        return 0;
-    }
-
-    QTAILQ_FOREACH(prop, &OBJECT(machine)->properties, node) {
-        if (!prop->set) {
-            continue;
-        }
-
-        error_printf("%s.%s=%s", MACHINE_GET_CLASS(machine)->name,
-                     prop->name, prop->type);
-        if (prop->description) {
-            error_printf(" (%s)\n", prop->description);
-        } else {
-            error_printf("\n");
-        }
-    }
-
-    return 1;
-}
-
 /***********************************************************/
 /* main execution loop */
 
@@ -3812,9 +3787,6 @@ int main(int argc, char **argv, char **envp)
 
     current_machine = MACHINE(object_new(object_class_get_name(
                           OBJECT_CLASS(machine_class))));
-    if (machine_help_func(qemu_get_machine_opts(), current_machine)) {
-        exit(0);
-    }
     object_property_add_child(object_get_root(), "machine",
                               OBJECT(current_machine), &error_abort);
     cpu_exec_init_all();
