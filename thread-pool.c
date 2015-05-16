@@ -86,15 +86,20 @@ static void *worker_thread(void *opaque)
         ThreadPoolElement *req;
         int ret;
 
+    keep_going:
         do {
             pool->idle_threads++;
             qemu_mutex_unlock(&pool->lock);
-            ret = qemu_sem_timedwait(&pool->sem, 20000);
+            ret = qemu_sem_timedwait(&pool->sem, 10000);
             qemu_mutex_lock(&pool->lock);
             pool->idle_threads--;
         } while (ret == -1 && !QTAILQ_EMPTY(&pool->request_list));
         if (ret == -1 || pool->stopping) {
-            break;
+            if (pool->stopping) {
+                break;
+            } else {
+                goto keep_going;
+            }
         }
 
         req = QTAILQ_FIRST(&pool->request_list);
