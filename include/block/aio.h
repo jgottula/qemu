@@ -87,6 +87,8 @@ struct AioContext {
 
     /* TimerLists for calling timers - one per clock type */
     QEMUTimerListGroup tlg;
+
+    char name[16];
 };
 
 /* Used internally to synchronize aio_poll against qemu_bh_schedule.  */
@@ -99,7 +101,7 @@ void aio_set_dispatching(AioContext *ctx, bool dispatching);
  * They also provide bottom halves, a service to execute a piece of code
  * as soon as possible.
  */
-AioContext *aio_context_new(Error **errp);
+AioContext *aio_context_new(Error **errp, const char *name);
 
 /**
  * aio_context_ref:

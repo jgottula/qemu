@@ -72,6 +72,7 @@ struct ThreadPool {
     int new_threads;     /* backlog of threads we need to create */
     int pending_threads; /* threads created but not running yet */
     bool stopping;
+    int thread_counter;
 };
 
 static void *worker_thread(void *opaque)
@@ -128,16 +129,22 @@ static void *worker_thread(void *opaque)
 static void do_spawn_thread(ThreadPool *pool)
 {
     QemuThread t;
+    char thread_name[16];
 
     /* Runs with lock taken.  */
     if (!pool->new_threads) {
         return;
     }
 
+    memset(thread_name, 0, sizeof(thread_name));
+    snprintf(thread_name, sizeof(thread_name), "%s[%d]", pool->ctx->name, pool->thread_counter);
+
+    pool->thread_counter++;
+
     pool->new_threads--;
     pool->pending_threads++;
 
-    qemu_thread_create(&t, "worker", worker_thread, pool, QEMU_THREAD_DETACHED);
+    qemu_thread_create(&t, thread_name, worker_thread, pool, QEMU_THREAD_DETACHED);
 }
 
 static void spawn_thread_bh_fn(void *opaque)
@@ -307,6 +314,8 @@ static void thread_pool_init_one(ThreadPool *pool, AioContext *ctx)
 
     QLIST_INIT(&pool->head);
     QTAILQ_INIT(&pool->request_list);
+
+    pool->thread_counter = 0;
 
     /* pre-spawn max number of threads to avoid latency later */
     qemu_mutex_lock(&pool->lock);

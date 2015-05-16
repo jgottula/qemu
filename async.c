@@ -280,7 +280,7 @@ static void aio_timerlist_notify(void *opaque)
     aio_notify(opaque);
 }
 
-AioContext *aio_context_new(Error **errp)
+AioContext *aio_context_new(Error **errp, const char *name)
 {
     int ret;
     AioContext *ctx;
@@ -299,6 +299,8 @@ AioContext *aio_context_new(Error **errp)
     qemu_mutex_init(&ctx->bh_lock);
     rfifolock_init(&ctx->lock, NULL, NULL);
     timerlistgroup_init(&ctx->tlg, aio_timerlist_notify, ctx);
+
+    g_strlcpy(ctx->name, name, sizeof(ctx->name));
 
     return ctx;
 }
