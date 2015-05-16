@@ -302,6 +302,13 @@ static void thread_pool_init_one(ThreadPool *pool, AioContext *ctx)
 
     QLIST_INIT(&pool->head);
     QTAILQ_INIT(&pool->request_list);
+
+    /* pre-spawn max number of threads to avoid latency later */
+    qemu_mutex_lock(&pool->lock);
+    while (pool->cur_threads < pool->max_threads) {
+        spawn_thread(pool);
+    }
+    qemu_mutex_unlock(&pool->lock);
 }
 
 ThreadPool *thread_pool_new(AioContext *ctx)
