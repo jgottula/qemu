@@ -137,7 +137,7 @@ static void do_spawn_thread(ThreadPool *pool)
     }
 
     memset(thread_name, 0, sizeof(thread_name));
-    snprintf(thread_name, sizeof(thread_name), "%s[%d]", pool->ctx->name, pool->thread_counter);
+    snprintf(thread_name, sizeof(thread_name), "%s:%d", pool->ctx->name, pool->thread_counter);
 
     pool->thread_counter++;
 
