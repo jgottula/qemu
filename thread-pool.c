@@ -72,6 +72,7 @@ struct ThreadPool {
     int new_threads;     /* backlog of threads we need to create */
     int pending_threads; /* threads created but not running yet */
     bool stopping;
+    int thread_counter;
 };
 
 static void *worker_thread(void *opaque)
@@ -86,6 +87,7 @@ static void *worker_thread(void *opaque)
         ThreadPoolElement *req;
         int ret;
 
+keep_going:
         do {
             pool->idle_threads++;
             qemu_mutex_unlock(&pool->lock);
@@ -94,7 +96,8 @@ static void *worker_thread(void *opaque)
             pool->idle_threads--;
         } while (ret == -1 && !QTAILQ_EMPTY(&pool->request_list));
         if (ret == -1 || pool->stopping) {
-            break;
+            if (pool->stopping) break;
+            goto keep_going;
         }
 
         req = QTAILQ_FIRST(&pool->request_list);
@@ -123,16 +126,21 @@ static void *worker_thread(void *opaque)
 static void do_spawn_thread(ThreadPool *pool)
 {
     QemuThread t;
+    char thread_name[16];
 
     /* Runs with lock taken.  */
     if (!pool->new_threads) {
         return;
     }
 
+    memset(thread_name, 0, sizeof(thread_name));
+    snprintf(thread_name, sizeof(thread_name), "%s:%d", pool->ctx->name, pool->thread_counter);
+    pool->thread_counter++;
+
     pool->new_threads--;
     pool->pending_threads++;
 
-    qemu_thread_create(&t, "worker", worker_thread, pool, QEMU_THREAD_DETACHED);
+    qemu_thread_create(&t, thread_name, worker_thread, pool, QEMU_THREAD_DETACHED);
 }
 
 static void spawn_thread_bh_fn(void *opaque)
@@ -297,11 +305,20 @@ static void thread_pool_init_one(ThreadPool *pool, AioContext *ctx)
     qemu_mutex_init(&pool->lock);
     qemu_cond_init(&pool->worker_stopped);
     qemu_sem_init(&pool->sem, 0);
-    pool->max_threads = 64;
+    pool->max_threads = 4;
     pool->new_thread_bh = aio_bh_new(ctx, spawn_thread_bh_fn, pool);
 
     QLIST_INIT(&pool->head);
     QTAILQ_INIT(&pool->request_list);
+
+    pool->thread_counter = 0;
+    
+    /* pre-spawn max threads to avoid latency later */
+    qemu_mutex_lock(&pool->lock);
+    while (pool->cur_threads < pool->max_threads) {
+        spawn_thread(pool);
+    }
+    qemu_mutex_unlock(&pool->lock);
 }
 
 ThreadPool *thread_pool_new(AioContext *ctx)

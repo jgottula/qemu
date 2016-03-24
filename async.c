@@ -322,7 +322,7 @@ static void event_notifier_dummy_cb(EventNotifier *e)
 {
 }
 
-AioContext *aio_context_new(Error **errp)
+AioContext *aio_context_new(Error **errp, const char *name)
 {
     int ret;
     AioContext *ctx;
@@ -350,6 +350,8 @@ AioContext *aio_context_new(Error **errp)
     timerlistgroup_init(&ctx->tlg, aio_timerlist_notify, ctx);
 
     ctx->notify_dummy_bh = aio_bh_new(ctx, notify_dummy_bh, NULL);
+
+    g_strlcpy(ctx->name, name, sizeof(ctx->name));
 
     return ctx;
 fail:

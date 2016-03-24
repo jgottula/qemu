@@ -152,7 +152,7 @@ int qemu_init_main_loop(Error **errp)
         return ret;
     }
 
-    qemu_aio_context = aio_context_new(&local_error);
+    qemu_aio_context = aio_context_new(&local_error, "mainloop");
     qemu_notify_bh = qemu_bh_new(notify_event_cb, NULL);
     if (!qemu_aio_context) {
         error_propagate(errp, local_error);

@@ -129,6 +129,8 @@ struct AioContext {
     int epollfd;
     bool epoll_enabled;
     bool epoll_available;
+
+    char name[16];
 };
 
 /**
@@ -138,7 +140,7 @@ struct AioContext {
  * They also provide bottom halves, a service to execute a piece of code
  * as soon as possible.
  */
-AioContext *aio_context_new(Error **errp);
+AioContext *aio_context_new(Error **errp, const char *name);
 
 /**
  * aio_context_ref:

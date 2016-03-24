@@ -73,11 +73,14 @@ static void iothread_complete(UserCreatable *obj, Error **errp)
 {
     Error *local_error = NULL;
     IOThread *iothread = IOTHREAD(obj);
-    char *name, *thread_name;
+    char thread_name[16];
+
+    memset(thread_name, 0, sizeof(thread_name));
+    snprintf(thread_name, sizeof(thread_name), "%s", iothread_get_id(iothread));
 
     iothread->stopping = false;
     iothread->thread_id = -1;
-    iothread->ctx = aio_context_new(&local_error);
+    iothread->ctx = aio_context_new(&local_error, thread_name);
     if (!iothread->ctx) {
         error_propagate(errp, local_error);
         return;
@@ -89,12 +92,12 @@ static void iothread_complete(UserCreatable *obj, Error **errp)
     /* This assumes we are called from a thread with useful CPU affinity for us
      * to inherit.
      */
-    name = object_get_canonical_path_component(OBJECT(obj));
-    thread_name = g_strdup_printf("IO %s", name);
+//    name = object_get_canonical_path_component(OBJECT(obj));
+//    thread_name = g_strdup_printf("IO %s", name);
     qemu_thread_create(&iothread->thread, thread_name, iothread_run,
                        iothread, QEMU_THREAD_JOINABLE);
-    g_free(thread_name);
-    g_free(name);
+//    g_free(thread_name);
+//    g_free(name);
 
     /* Wait for initialization to complete */
     qemu_mutex_lock(&iothread->init_done_lock);
